@@ -10,7 +10,7 @@ A minimal, functional MVP for booking EV charging slots based on SRS requirement
 
 ## Quick Start
 
-### Option 1: Full Setup (Recommended for first-time users)
+### For Linux/macOS Users
 ```bash
 # Automatically detect system and install all dependencies
 ./setup.sh
@@ -19,14 +19,40 @@ A minimal, functional MVP for booking EV charging slots based on SRS requirement
 ./start.sh
 ```
 
-### Option 2: Manual Setup
+### For Windows Users
+
+#### Option 1: PowerShell (Recommended)
+```powershell
+# Allow script execution (one-time)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# Install dependencies (run as Administrator)
+.\setup.ps1
+
+# Start application
+.\start.ps1
+```
+
+#### Option 2: Batch Scripts
+```batch
+# Install dependencies (run as Administrator)
+setup.bat
+
+# Start application
+start.bat
+```
+
+#### Option 3: Manual Setup
+See [Windows Guide](docs/windows-guide.md) for detailed manual instructions.
+
+### Option 4: Manual Setup (All Platforms)
 ```bash
 # Install dependencies manually
 pip install -r requirements.txt
 npm install
 
 # Start everything (auto-creates database schema)
-./start.sh
+./start.sh  # or start.bat on Windows
 ```
 
 ## Project Structure
@@ -51,8 +77,12 @@ npm install
 │   ├── api-docs.md         # API documentation
 │   └── testing.md          # Testing procedures
 ├── scripts/                # Utility scripts
-│   ├── setup.sh           # Environment setup script
-│   └── start.sh           # Application startup script
+│   ├── setup.sh           # Unix environment setup
+│   ├── setup.ps1          # PowerShell environment setup
+│   ├── setup.bat          # Batch environment setup
+│   ├── start.sh           # Unix application startup
+│   ├── start.ps1          # PowerShell application startup
+│   └── start.bat          # Batch application startup
 ├── tests/                  # Integration tests
 ├── .env.example           # Environment template
 ├── .gitignore            # Git ignore file
@@ -73,6 +103,7 @@ npm install
 - [User Guide](docs/user-guide.md) - For non-technical users
 - [API Documentation](docs/api-docs.md) - API reference
 - [Testing Guide](docs/testing.md) - Test procedures
+- [Windows Guide](docs/windows-guide.md) - Windows-specific setup and troubleshooting
 
 ## Requirements
 - Python 3.8+
@@ -82,30 +113,29 @@ npm install
 
 ## Setup Scripts
 
-### `setup.sh` - Environment Setup
-Automatically detects your system and installs all dependencies:
-- Python 3.8+ with pip
-- Node.js 14+ with npm  
-- MySQL 8.0+
-- Git
-- All project dependencies
+### Linux/macOS Scripts
+- **`setup.sh`** - Environment setup for Unix systems
+- **`start.sh`** - Application startup for Unix systems
 
-```bash
-./setup.sh
-```
+### Windows Scripts
+- **`setup.ps1`** - PowerShell environment setup (recommended)
+- **`start.ps1`** - PowerShell application startup
+- **`setup.bat`** - Batch environment setup (alternative)
+- **`start.bat`** - Batch application startup (alternative)
 
-**Supported Systems:**
-- Ubuntu/Debian (apt)
-- CentOS/RHEL (yum/dnf)
-- Arch Linux (pacman)
-- macOS (Homebrew)
-- Windows (Chocolatey with Git Bash/WSL)
+### Cross-Platform Features
+All setup scripts automatically:
+- Detect operating system and package manager
+- Install Python 3.8+, Node.js 14+, MySQL 8.0+
+- Set up virtual environments
+- Install all project dependencies
+- Create secure configuration files
+- Run system tests
 
-### `start.sh` - Application Startup
-Starts both frontend and backend services:
+### Windows-Specific Support
+- **PowerShell Scripts**: Modern, colored output, comprehensive error handling
+- **Batch Scripts**: Compatible with older Windows versions
+- **Manual Setup Guide**: Step-by-step instructions for manual installation
+- **Troubleshooting Guide**: Common Windows issues and solutions
 
-```bash
-./start.sh          # Start all services
-./start.sh stop     # Stop all services
-./start.sh status   # Check service status
-```
+See [Windows Guide](docs/windows-guide.md) for detailed Windows instructions.
