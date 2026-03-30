@@ -33,18 +33,13 @@ const AdminPage = () => {
 
   const fetchAdminData = async () => {
     try {
-      const [bookingsResponse] = await Promise.all([
-        apiService.getAllBookings()
+      const [bookingsResponse, stationsResponse] = await Promise.all([
+        apiService.getAllBookings(),
+        apiService.getStations()
       ]);
       
       setBookings(bookingsResponse.bookings || []);
-      
-      // Get sample stations data (we'll use a hardcoded list for now)
-      setStations([
-        { id: 1, name: 'Central Charging Hub', address: '123 Main Street, Bangalore', total_slots: 4 },
-        { id: 2, name: 'North EV Station', address: '456 Park Avenue, Bangalore', total_slots: 6 },
-        { id: 3, name: 'South Charging Point', address: '789 Ring Road, Bangalore', total_slots: 4 }
-      ]);
+      setStations(stationsResponse.stations || []);
       
     } catch (error) {
       setError('Failed to fetch admin data');

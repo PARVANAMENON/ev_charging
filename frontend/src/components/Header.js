@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Header = () => {
@@ -21,36 +21,32 @@ const Header = () => {
   return (
     <header className="header">
       <div className="header-content">
-        <a href="/dashboard" className="logo">
-          EV Charging Booking
-        </a>
-        
+        <Link to="/dashboard" className="logo">
+          EV Booking Pro
+        </Link>
+
         <nav className="nav-links">
-          <a href="/dashboard" className="nav-link">
+          <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Dashboard
-          </a>
-          <a href="/stations" className="nav-link">
+          </NavLink>
+          <NavLink to="/stations" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             Stations
-          </a>
-          <a href="/bookings" className="nav-link">
+          </NavLink>
+          <NavLink to="/bookings" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
             My Bookings
-          </a>
-          
+          </NavLink>
+
           {user?.user_type === 'admin' && (
-            <a href="/admin" className="nav-link">
+            <NavLink to="/admin" className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
               Admin
-            </a>
+            </NavLink>
           )}
-          
-          <span className="nav-link" style={{ border: 'none', cursor: 'default' }}>
+
+          <span className="nav-username">
             {user?.username}
           </span>
-          
-          <button 
-            onClick={handleLogout}
-            className="nav-link"
-            style={{ cursor: 'pointer' }}
-          >
+
+          <button type="button" onClick={handleLogout} className="nav-link">
             Logout
           </button>
         </nav>

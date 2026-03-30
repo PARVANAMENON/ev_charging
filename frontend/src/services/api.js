@@ -98,6 +98,10 @@ class ApiService {
     return this.request(`/stations/${stationId}`);
   }
 
+  async getStations() {
+    return this.request('/stations');
+  }
+
   async addStation(stationData) {
     return this.request('/stations', {
       method: 'POST',

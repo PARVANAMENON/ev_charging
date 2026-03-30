@@ -90,7 +90,11 @@ def create_app():
             success = user_model.create_user(username, email, password)
             
             if success:
-                return jsonify({'message': 'User registered successfully'}), 201
+                created_user = user_model.authenticate_user(username, password)
+                return jsonify({
+                    'message': 'User registered successfully',
+                    'user': created_user
+                }), 201
             else:
                 return jsonify({'error': 'Username or email already exists'}), 400
                 
@@ -202,6 +206,12 @@ def create_app():
             return jsonify({'station': station}), 200
         else:
             return jsonify({'error': 'Station not found'}), 404
+
+    @app.route('/api/stations', methods=['GET'])
+    def get_stations():
+        """Get list of all stations"""
+        stations = station_model.get_all_stations()
+        return jsonify({'stations': stations}), 200
     
     @app.route('/api/stations', methods=['POST'])
     @admin_required

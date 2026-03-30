@@ -197,7 +197,16 @@ class DatabaseManager:
         VALUES (%s, %s, %s)
         """
         cursor.executemany(slot_query, slots_data)
-    
+
+        # Create a default admin account if it does not exist
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", ('admin',))
+        if cursor.fetchone()[0] == 0:
+            admin_password_hash = bcrypt.hashpw('admin123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            cursor.execute(
+                "INSERT INTO users (username, email, password_hash, user_type) VALUES (%s, %s, %s, 'admin')",
+                ('admin', 'admin@example.com', admin_password_hash)
+            )
+
     def get_connection(self):
         """Get database connection"""
         if not self.connection or not self.connection.is_connected():
@@ -415,6 +424,24 @@ class Station:
             print(f"Station creation error: {e}")
             return False
 
+    def get_all_stations(self) -> List[Dict]:
+        """Get all charging stations"""
+        try:
+            conn = self.db.get_connection()
+            cursor = conn.cursor(dictionary=True)
+            query = """
+            SELECT id, name, address, latitude, longitude, total_slots
+            FROM stations
+            ORDER BY name
+            """
+            cursor.execute(query)
+            stations = cursor.fetchall()
+            cursor.close()
+            return stations
+        except Error as e:
+            print(f"Get all stations error: {e}")
+            return []
+
 
 class Slot:
     """Slot model for charging slots"""
@@ -551,7 +578,7 @@ class Booking:
             query = """
             SELECT b.id, b.start_time, b.end_time, b.status,
                    s.slot_number, s.slot_type,
-                   st.name as station_name, st.address,
+                   st.id AS station_id, st.name as station_name, st.address,
                    v.vehicle_type, v.license_plate
             FROM bookings b
             JOIN slots s ON b.slot_id = s.id
