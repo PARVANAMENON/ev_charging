@@ -25,7 +25,7 @@ const BookingsPage = () => {
       const response = await apiService.getBookings();
       setBookings(response.bookings || []);
     } catch (error) {
-      setError('Failed to fetch bookings');
+      setError(error?.message || String(error) || 'Failed to fetch bookings');
     } finally {
       setIsLoading(false);
     }

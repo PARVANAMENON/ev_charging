@@ -12,6 +12,7 @@ import apiService from '../services/api';
 
 const BookingPage = () => {
   const { stationId } = useParams();
+  const parsedStationId = parseInt(stationId, 10);
   const navigate = useNavigate();
   const { user } = useAuth();
   
@@ -20,6 +21,9 @@ const BookingPage = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [selectedVehicleType, setSelectedVehicleType] = useState('2-wheeler');
+  const [manualLicensePlate, setManualLicensePlate] = useState('');
+  const [useManualVehicleType, setUseManualVehicleType] = useState(false);
   const [bookingTime, setBookingTime] = useState({
     date: '',
     startTime: '',
@@ -34,36 +38,57 @@ const BookingPage = () => {
   // Load station, vehicles, and available slots
   useEffect(() => {
     const loadData = async () => {
+      let stationError = '';
+      let vehicleError = '';
+
       try {
-        const [stationResponse, vehiclesResponse] = await Promise.all([
-          apiService.getStation(stationId),
-          apiService.getVehicles()
-        ]);
-        
-        setStation(stationResponse.station);
-        setVehicles(vehiclesResponse.vehicles || []);
-        
-        // Set default time to next hour
-        const now = new Date();
-        const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
-        const endTime = new Date(nextHour.getTime() + 60 * 60 * 1000);
-        
-        setBookingTime({
-          date: nextHour.toISOString().split('T')[0],
-          startTime: nextHour.toTimeString().slice(0, 5),
-          endTime: endTime.toTimeString().slice(0, 5)
-        });
-        
-        // Select first vehicle by default
-        if (vehiclesResponse.vehicles && vehiclesResponse.vehicles.length > 0) {
-          setSelectedVehicle(vehiclesResponse.vehicles[0].id);
+        if (Number.isNaN(parsedStationId)) {
+          throw new Error('Invalid station ID');
         }
-        
+
+        const stationResponse = await apiService.getStation(parsedStationId);
+        if (!stationResponse || !stationResponse.station) {
+          throw new Error('Station could not be found');
+        }
+        setStation(stationResponse.station);
       } catch (error) {
-        setError('Failed to load station information');
-      } finally {
-        setIsLoading(false);
+        stationError = error?.message || 'Failed to load station information';
       }
+
+      try {
+        const vehiclesResponse = await apiService.getVehicles();
+        const vehiclesList = vehiclesResponse.vehicles || [];
+        setVehicles(vehiclesList);
+
+        if (vehiclesList.length > 0) {
+          setSelectedVehicle(vehiclesList[0].id);
+          setSelectedVehicleType(vehiclesList[0].vehicle_type);
+          setUseManualVehicleType(false);
+        } else {
+          setUseManualVehicleType(true);
+          setSelectedVehicle('');
+        }
+      } catch (error) {
+        vehicleError = 'Failed to load your vehicles';
+        setUseManualVehicleType(true);
+        setSelectedVehicle('');
+      }
+
+      const now = new Date();
+      const nextHour = new Date(now.getTime() + 60 * 60 * 1000);
+      const endTime = new Date(nextHour.getTime() + 60 * 60 * 1000);
+
+      setBookingTime({
+        date: nextHour.toISOString().split('T')[0],
+        startTime: nextHour.toTimeString().slice(0, 5),
+        endTime: endTime.toTimeString().slice(0, 5)
+      });
+
+      if (stationError || vehicleError) {
+        setError([stationError, vehicleError].filter(Boolean).join('. '));
+      }
+
+      setIsLoading(false);
     };
 
     loadData();
@@ -71,16 +96,15 @@ const BookingPage = () => {
 
   // Fetch available slots when time or vehicle changes
   useEffect(() => {
-    if (bookingTime.date && bookingTime.startTime && bookingTime.endTime && selectedVehicle) {
+    if (bookingTime.date && bookingTime.startTime && bookingTime.endTime && (selectedVehicle || useManualVehicleType)) {
       fetchAvailableSlots();
     }
-  }, [bookingTime, selectedVehicle]);
+  }, [bookingTime, selectedVehicle, useManualVehicleType, selectedVehicleType]);
 
   const fetchAvailableSlots = async () => {
-    if (!selectedVehicle) return;
-    
     const vehicle = vehicles.find(v => v.id === parseInt(selectedVehicle));
-    if (!vehicle) return;
+    const vehicleType = vehicle ? vehicle.vehicle_type : selectedVehicleType;
+    if (!vehicleType) return;
 
     try {
       const startDateTime = new Date(`${bookingTime.date}T${bookingTime.startTime}`);
@@ -88,7 +112,7 @@ const BookingPage = () => {
       
       const response = await apiService.getAvailableSlots(
         stationId,
-        vehicle.vehicle_type,
+        vehicleType,
         startDateTime.toISOString(),
         endDateTime.toISOString()
       );
@@ -102,8 +126,8 @@ const BookingPage = () => {
   };
 
   const handleBooking = async () => {
-    if (!selectedSlot || !selectedVehicle) {
-      setError('Please select a slot and vehicle');
+    if (!selectedSlot) {
+      setError('Please select a slot');
       return;
     }
 
@@ -112,12 +136,34 @@ const BookingPage = () => {
     setSuccess('');
 
     try {
+      let vehicleId = parseInt(selectedVehicle);
+      if (!vehicleId) {
+        if (!manualLicensePlate) {
+          setError('Please enter your license plate to add a vehicle');
+          setIsBooking(false);
+          return;
+        }
+
+        await apiService.addVehicle({
+          vehicle_type: selectedVehicleType,
+          license_plate: manualLicensePlate
+        });
+
+        const vehiclesResponse = await apiService.getVehicles();
+        const newVehicles = vehiclesResponse.vehicles || [];
+        setVehicles(newVehicles);
+        if (newVehicles.length > 0) {
+          vehicleId = newVehicles[0].id;
+          setSelectedVehicle(vehicleId);
+        }
+      }
+
       const startDateTime = new Date(`${bookingTime.date}T${bookingTime.startTime}`);
       const endDateTime = new Date(`${bookingTime.date}T${bookingTime.endTime}`);
 
-      const response = await apiService.createBooking({
+      await apiService.createBooking({
         slot_id: selectedSlot,
-        vehicle_id: parseInt(selectedVehicle),
+        vehicle_id: vehicleId,
         start_time: startDateTime.toISOString(),
         end_time: endDateTime.toISOString()
       });
@@ -152,10 +198,15 @@ const BookingPage = () => {
       <div className="card">
         <div className="card-title">Station Not Found</div>
         <div className="card-content">
-          <p>The requested station could not be found.</p>
-          <button className="button" onClick={() => navigate('/stations')}>
-            Back to Stations
-          </button>
+          <p>{error || 'The requested station could not be found.'}</p>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+            <button className="button" onClick={() => navigate('/stations')}>
+              Back to Stations
+            </button>
+            <button className="button button-secondary" onClick={() => window.location.reload()}>
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -191,30 +242,68 @@ const BookingPage = () => {
       <div className="card" style={{ marginTop: '20px' }}>
         <div className="card-title">Select Vehicle</div>
         <div className="card-content">
-          {vehicles.length === 0 ? (
-            <div>
-              <p>No vehicles registered. Please add a vehicle first.</p>
-              <button 
-                className="button button-primary"
-                onClick={() => navigate('/stations')}
-                style={{ marginTop: '10px' }}
+          {vehicles.length > 0 && !useManualVehicleType && (
+            <>
+              <div className="form-group" style={{ margin: 0 }}>
+                <select
+                  value={selectedVehicle}
+                  onChange={(e) => setSelectedVehicle(e.target.value)}
+                  className="form-select"
+                >
+                  {vehicles.map(vehicle => (
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.license_plate} ({vehicle.vehicle_type})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                className="button button-secondary"
+                style={{ marginTop: '15px' }}
+                onClick={() => {
+                  setUseManualVehicleType(true);
+                  setSelectedVehicle('');
+                }}
               >
-                Add Vehicle
+                Use custom vehicle type instead
               </button>
-            </div>
-          ) : (
-            <div className="form-group" style={{ margin: 0 }}>
-              <select
-                value={selectedVehicle}
-                onChange={(e) => setSelectedVehicle(e.target.value)}
-                className="form-select"
-              >
-                {vehicles.map(vehicle => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.license_plate} ({vehicle.vehicle_type})
-                  </option>
-                ))}
-              </select>
+            </>
+          )}
+
+          {(vehicles.length === 0 || useManualVehicleType) && (
+            <div>
+              <p>Select your vehicle type and enter a license plate.</p>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Vehicle Type</label>
+                <select
+                  value={selectedVehicleType}
+                  onChange={(e) => setSelectedVehicleType(e.target.value)}
+                  className="form-select"
+                >
+                  <option value="2-wheeler">2-wheeler</option>
+                  <option value="4-wheeler">4-wheeler</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ margin: '15px 0 0 0' }}>
+                <label className="form-label">License Plate</label>
+                <input
+                  type="text"
+                  value={manualLicensePlate}
+                  onChange={(e) => setManualLicensePlate(e.target.value)}
+                  className="form-input"
+                  placeholder="Enter license plate"
+                />
+              </div>
+              {vehicles.length > 0 && (
+                <button
+                  className="button button-secondary"
+                  style={{ marginTop: '15px' }}
+                  onClick={() => setUseManualVehicleType(false)}
+                >
+                  Use existing registered vehicle instead
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -270,7 +359,7 @@ const BookingPage = () => {
         <div className="card-content">
           {availableSlots.length === 0 ? (
             <p>
-              {selectedVehicle && bookingTime.date && bookingTime.startTime && bookingTime.endTime
+              {(selectedVehicle || useManualVehicleType) && bookingTime.date && bookingTime.startTime && bookingTime.endTime
                 ? 'No slots available for the selected time and vehicle type.'
                 : 'Please select a vehicle and time to see available slots.'}
             </p>
@@ -292,7 +381,7 @@ const BookingPage = () => {
       </div>
 
       {/* Booking Button */}
-      {selectedSlot && selectedVehicle && (
+      {selectedSlot && (selectedVehicle || useManualVehicleType) && (
         <div style={{ marginTop: '20px', textAlign: 'center' }}>
           <button
             onClick={handleBooking}

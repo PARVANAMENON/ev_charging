@@ -209,14 +209,35 @@ class DatabaseManager:
 
     def get_connection(self):
         """Get database connection"""
-        if not self.connection or not self.connection.is_connected():
+        try:
+            if not self.connection:
+                self.connect()
+            elif not self.connection.is_connected():
+                try:
+                    self.connection.close()
+                except Exception:
+                    pass
+                self.connection = None
+                self.connect()
+        except Exception as e:
+            print(f"Database get_connection error: {e}")
+            try:
+                if self.connection:
+                    self.connection.close()
+            except Exception:
+                pass
+            self.connection = None
             self.connect()
+
         return self.connection
     
     def close(self):
         """Close database connection"""
-        if self.connection and self.connection.is_connected():
-            self.connection.close()
+        try:
+            if self.connection and self.connection.is_connected():
+                self.connection.close()
+        except Exception:
+            pass
 
 
 class User:

@@ -5,7 +5,7 @@
  * It provides a centralized way to make HTTP requests and handle responses.
  */
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
 
 class ApiService {
   constructor() {
@@ -28,16 +28,26 @@ class ApiService {
       };
 
       const response = await fetch(url, config);
-      const data = await response.json();
+      const text = await response.text();
+      let data = {};
+
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (parseError) {
+          console.warn('API response is not valid JSON:', text);
+          data = {};
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`);
+        throw new Error(data.error || response.statusText || `HTTP error! status: ${response.status}`);
       }
 
       return data;
     } catch (error) {
       console.error('API request failed:', error);
-      throw error;
+      throw new Error(error?.message || String(error) || 'Unknown API error');
     }
   }
 

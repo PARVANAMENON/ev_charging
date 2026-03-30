@@ -1,0 +1,28 @@
+{
+  "stations": [
+    {
+      "address": "123 Main Street, Bangalore",
+      "id": 1,
+      "latitude": "12.97160000",
+      "longitude": "77.59460000",
+      "name": "Central Charging Hub",
+      "total_slots": 4
+    },
+    {
+      "address": "456 Park Avenue, Bangalore",
+      "id": 2,
+      "latitude": "13.03500000",
+      "longitude": "77.59650000",
+      "name": "North EV Station",
+      "total_slots": 6
+    },
+    {
+      "address": "789 Ring Road, Bangalore",
+      "id": 3,
+      "latitude": "12.90810000",
+      "longitude": "77.54760000",
+      "name": "South Charging Point",
+      "total_slots": 4
+    }
+  ]
+}

@@ -64,7 +64,7 @@ const StationsPage = () => {
         setError('No stations found within the specified radius.');
       }
     } catch (error) {
-      setError('Failed to fetch stations. Please try again.');
+      setError(error.message || 'Failed to fetch stations. Please try again.');
     } finally {
       setIsLoading(false);
     }
